@@ -1,0 +1,5 @@
+turtle_rect:
+  ros__parameters:
+    max_xdot: 2.0
+    max_wdot: 1.0
+    freq: 100
