@@ -19,6 +19,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(turtlesim REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -34,7 +35,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 
 add_executable(turtle_rect src/turtle_rect.cpp)
-ament_target_dependencies(turtle_rect rclcpp std_msgs geometry_msgs turtlesim ${PROJECT_NAME})
+ament_target_dependencies(turtle_rect rclcpp std_msgs geometry_msgs turtlesim ${PROJECT_NAME} std_srvs)
 
 install(TARGETS
   turtle_rect
