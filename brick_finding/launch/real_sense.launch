@@ -1,0 +1,10 @@
+<launch>
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="enable_pointcloud" value="true"/>
+    </include>
+    
+    <!-- Static transform -->
+      
+    <node pkg="tf" type="static_transform_publisher" name="veodyne2rs" args="0 0 -0.01 0 0 0 /velodyne /camera_link 100"/>
+
+</launch>

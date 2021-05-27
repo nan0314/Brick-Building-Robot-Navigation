@@ -1,0 +1,97 @@
+<launch>
+  <arg name="gl300" default="false" doc="True if --opengl 300 should be used to launch rviz to avoid rviz bug #1508"/>
+  <arg name="vis" default="true" doc="Launch RViZ"/>
+  <arg name="source" default="none" doc="Source of point cloud: can be kinect, openni, realsense, pcd (for data from files), or none"/>
+  <arg name="min_z" default="0.5" doc="Minimum z distance between camera and table" />
+
+  <!-- launch the nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen"/>  
+
+  <!-- crop box filtering.... This throws out data that is far away from the
+       table where we are trying to extract data. These values were tuned for
+       the PCD file included using rqt_reconfigure.-->
+  <group ns="box_filter">
+    <node pkg="nodelet" type="nodelet" name="cropbox" args="load pcl/CropBox /pcl_manager" output="screen">
+      <remap from="~input" to="/velodyne_points" />
+      <rosparam>
+        min_x: -5
+        max_x: 5
+        min_y: -5
+        max_y: 5
+        min_z: -2.0
+        max_z: 0
+      </rosparam>
+    </node>
+  </group>
+
+  <!-- voxel downsampling... While not strictly necessary, this produces a less
+       dense point cloud. This makes it easier for later nodelets to keep up
+       with the processing frequency -->
+  <group ns="cloud_downsampler">
+    <node pkg="nodelet" type="nodelet" name="voxel" args="load pcl/VoxelGrid /pcl_manager" output="screen">
+      <remap from="~input" to="/box_filter/cropbox/output" />
+      <rosparam>
+        leaf_size: 0.01
+        filter_field_name: z
+        filter_limit_min: -10.0
+        filter_limit_max: 10.0
+      </rosparam>
+    </node>
+  </group>
+
+
+<!-- statistical outlier... Perform statistical outlier removal of the
+       non-table cloud, this helps to remove random stray points that may exist
+       in the point cloud -->
+  <group ns="surfaces">
+    <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/StatisticalOutlierRemoval /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <rosparam>
+        mean_k: 10
+        stddev: 0.01
+      </rosparam>
+    </node>
+  </group>
+
+
+  <node pkg="brick_finding" type="surface_extractor" name="segmentation" output="screen">
+      <remap from="cloud_in" to="/surfaces/cutoff/output" />
+  </node>
+  
+  <!-- table extraction... The `~model_type` private parameter was found by
+       looking at the `model_types.h` file included in PCL source code
+       (available here:
+       http://docs.pointclouds.org/1.7.0/model__types_8h_source.html). The `0`
+       type corresponds to pcl::SACMODEL_PLANE. -->
+  <!-- <group ns="normal_segmentation">
+    <node pkg="nodelet" type="nodelet" name="segmentation" args="load pcl/SACSegmentation /pcl_manager" output="screen">
+      <remap from="~input" to="/cloud_downsampler/voxel/output" />
+      <param name="model_type" value="0" type="int" />
+      <param name="distance_threshold" value="0.02" type="double" />
+    </node>
+  </group> -->
+
+<!-- statistical outlier... Perform statistical outlier removal of the
+       non-table cloud, this helps to remove random stray points that may exist
+       in the point cloud -->
+  <group ns="outlier">
+    <node pkg="nodelet" type="nodelet" name="cutoff" args="load pcl/StatisticalOutlierRemoval /pcl_manager" output="screen">
+      <remap from="~input" to="/outliers" />
+      <rosparam>
+        mean_k: 10
+        stddev: 0.01
+      </rosparam>
+    </node>
+  </group>
+
+  <!-- cluster extraction... Extract the clusters of whatever is left on the
+       table. Right now, the max number of clusters is hard coded to be 3. -->
+  <node pkg="brick_finding" name="cluster_extraction" type="cluster_extractor" output="screen" />
+
+<arg if="$(arg gl300)" name="gl" value="--opengl 300" />
+<arg unless="$(arg gl300)" name="gl" value="" />
+  <!-- start rviz if vis arg is true -->
+  <node pkg="rviz" type="rviz" respawn="false" name="rviz" if="$(arg vis)"
+        args="$(arg gl) -d $(find brick_finding)/rviz/finding.rviz" />
+
+</launch>
