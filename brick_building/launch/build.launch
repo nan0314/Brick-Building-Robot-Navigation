@@ -1,0 +1,7 @@
+<launch>
+  
+  <include file="$(find brick_finding)/launch/brick_finder.launch"/>
+
+  <include file="$(find brick_nav)/launch/start_follow_waypoints.launch"/>
+
+</launch>

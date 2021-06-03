@@ -1,0 +1,10 @@
+<launch>
+  
+  <include file="$(find brick_finding)/launch/real_sense.launch"/>
+
+  <include file="$(find jackal_noetic_bringup)/launch/velodyne.launch"/>
+
+  <include file="$(find jackal_noetic_bringup)/launch/slam_toolbox_jackal.launch"/>
+
+
+</launch>

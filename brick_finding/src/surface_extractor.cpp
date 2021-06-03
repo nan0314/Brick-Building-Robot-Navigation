@@ -39,7 +39,7 @@ void cloud_callback(const sensor_msgs::PointCloud2ConstPtr &scan) {
     ROS_DEBUG("Convert incoming cloud to pcl cloud");
     pcl::fromROSMsg(*scan, *cloud);
 
-    Eigen::Vector3f axis = Eigen::Vector3f(0.0,0.0,1.0);
+    Eigen::Vector3f axis = Eigen::Vector3f(0.0,1.0,0.0);
 
     // Create the segmentation object
     pcl::SACSegmentation<pcl::PointXYZ> seg;

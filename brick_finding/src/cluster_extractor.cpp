@@ -17,6 +17,13 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <vector>
+#include <thread>
+
+#include <pcl/features/moment_of_inertia_estimation.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/visualization/cloud_viewer.h>
+
 
 
 //---------------------------------------------------------------------------
@@ -78,8 +85,8 @@ public:
 
         // setup extraction:
         pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-        ec.setClusterTolerance (0.15); // cm
-        ec.setMinClusterSize (50);
+        ec.setClusterTolerance (0.01); // cm
+        ec.setMinClusterSize (75);
         ec.setMaxClusterSize (2000);
         ec.setInputCloud (cloud);
         // perform cluster extraction
@@ -120,9 +127,7 @@ public:
             pt.point.y = centroid(1);
             pt.point.z = centroid(2);
 
-            if (pt.point.z > -0.3 | pt.point.z < -0.45){
-                continue;
-            } else if (pt.point.x < 0){
+            if (pt.point.y < 0.21 | pt.point.y > 0.24){
                 continue;
             }
 
@@ -141,21 +146,59 @@ public:
             y_spread = sqrt(y_spread);
             z_spread = sqrt(z_spread);
 
-            if (z_spread > 0.025){
-                continue;
-            } else if (x_spread + y_spread > 0.2){
-                continue;
-            }
+            // if (z_spread > 0.025){
+            //     continue;
+            // } else if (x_spread + y_spread > 0.2){
+            //     continue;
+            // }
 
-            std::cout << x_spread << " " << y_spread << " " << z_spread << std::endl;
+            // std::cout << pt.point.x << " " << pt.point.y << " " << pt.point.z << std::endl;
 
             // convert to rosmsg and publish:
             ROS_DEBUG("Publishing extracted cloud");
             pcl::toROSMsg(*cloud_cluster, *ros_cloud);
             ros_cloud->header.frame_id = scan->header.frame_id;
-            if(j < MAX_CLUSTERS)
+            if(j < 1)
             {
-                cloud_pub[j].publish(ros_cloud);
+                // cloud_pub[j].publish(ros_cloud);
+
+                // Initialize Moment of Inertia Estimator
+                pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
+                feature_extractor.setInputCloud (cloud_cluster);
+                feature_extractor.compute ();
+
+                // Declare variables for features
+                std::vector <float> moment_of_inertia;
+                std::vector <float> eccentricity;
+                pcl::PointXYZ min_point_AABB;
+                pcl::PointXYZ max_point_AABB;
+                pcl::PointXYZ min_point_OBB;
+                pcl::PointXYZ max_point_OBB;
+                pcl::PointXYZ position_OBB;
+                Eigen::Matrix3f rotational_matrix_OBB;
+                float major_value, middle_value, minor_value;
+                Eigen::Vector3f major_vector, middle_vector, minor_vector;
+                Eigen::Vector3f mass_center;
+
+                // Extract features
+                feature_extractor.getMomentOfInertia (moment_of_inertia);
+                feature_extractor.getEccentricity (eccentricity);
+                feature_extractor.getAABB (min_point_AABB, max_point_AABB);
+                feature_extractor.getOBB (min_point_OBB, max_point_OBB, position_OBB, rotational_matrix_OBB);
+                feature_extractor.getEigenValues (major_value, middle_value, minor_value);
+                feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
+                feature_extractor.getMassCenter (mass_center);
+
+                // Find OBB
+                pcl::PointXYZ center (mass_center (0), mass_center (1), mass_center (2));
+                pcl::PointXYZ x_axis (major_vector (0) + mass_center (0), major_vector (1) + mass_center (1), major_vector (2) + mass_center (2));
+                pcl::PointXYZ y_axis (middle_vector (0) + mass_center (0), middle_vector (1) + mass_center (1), middle_vector (2) + mass_center (2));
+                pcl::PointXYZ z_axis (minor_vector (0) + mass_center (0), minor_vector (1) + mass_center (1), minor_vector (2) + mass_center (2));
+                // viewer->addLine (center, x_axis, 1.0f, 0.0f, 0.0f, "major eigen vector");
+                // viewer->addLine (center, y_axis, 0.0f, 1.0f, 0.0f, "middle eigen vector");
+                // viewer->addLine (center, z_axis, 0.0f, 0.0f, 1.0f, "minor eigen vector");
+                
+
            
                 // compute centroid and publish
                 // pcl::compute3DCentroid(*cloud_cluster, centroid);
@@ -164,13 +207,16 @@ public:
                 // pt.point.z = centroid(2);
                 pt.header.stamp = scan->header.stamp;
                 pt.header.frame_id = scan->header.frame_id;
-                point_pub[j].publish(pt);
+
+                double zdist = fabs(center.z - x_axis.z);
+                double xdist = fabs(center.x - x_axis.x);
+                double angle = atan2(zdist,xdist);
 
                 // let's send transforms as well:
                 tf::Transform transform;
                 transform.setOrigin( tf::Vector3(centroid(0), centroid(1), centroid(2)) );
                 tf::Quaternion q;
-                q.setRPY(0, 0, 0);
+                q.setRPY(0, angle, 0);
                 transform.setRotation(q);
                 br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), scan->header.frame_id, "cluster_" + std::to_string(j + 1) + "_frame"));
             }
