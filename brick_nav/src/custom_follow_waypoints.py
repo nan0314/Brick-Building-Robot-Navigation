@@ -112,11 +112,15 @@ class GetPath(State):
 class PathComplete(State):
     def __init__(self):
         State.__init__(self, outcomes=['success'])
+        self.path_finish = rospy.Publisher('/finished_path', Empty, queue_size=1)
 
     def execute(self, userdata):
         rospy.loginfo('###############################')
         rospy.loginfo('##### REACHED FINISH GATE #####')
         rospy.loginfo('###############################')
+
+        finished = Empty()
+        self.path_finish.publish(finished)
         return 'success'
 
 def main():

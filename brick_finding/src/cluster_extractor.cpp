@@ -14,6 +14,7 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/common/centroid.h>
 
+#include <std_msgs/Empty.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -29,7 +30,7 @@
 //---------------------------------------------------------------------------
 // Global Variables
 //---------------------------------------------------------------------------
-#define MAX_CLUSTERS 10
+#define MAX_CLUSTERS 3
 typedef pcl::PointXYZ PointT;
 std::string filename;
 
@@ -43,9 +44,13 @@ class ClusterExtractor
 private:
     ros::NodeHandle n_;
     ros::Subscriber cloud_sub;
+    ros::Subscriber broad_sub;
     ros::Publisher cloud_pub[MAX_CLUSTERS];
     ros::Publisher point_pub[MAX_CLUSTERS];
+    ros::Publisher start_pub;
     tf::TransformBroadcaster br;
+    tf::Transform transform;
+    std::string header;
 
 
 public:
@@ -53,6 +58,8 @@ public:
     {
         ROS_DEBUG("Creating subscribers and publishers");
         cloud_sub = n_.subscribe("/outlier/cutoff/output", 10, &ClusterExtractor::cloudcb, this);
+        broad_sub = n_.subscribe("/set_target",1,&ClusterExtractor::broadcb, this);
+        start_pub = n_.advertise<std_msgs::Empty>("/target_ready",1);
         br = tf::TransformBroadcaster();
         for(int i = 0; i < MAX_CLUSTERS; i++)
         {
@@ -61,9 +68,22 @@ public:
         }
     }
 
+    void broadcb(const std_msgs::Empty msg){
+
+        // Broadcast Brick pose
+        br.sendTransform( tf::StampedTransform(transform, ros::Time::now(),
+         header, "target"));
+        
+        // Tell waypoint publisher to publish
+        std_msgs::Empty start_command;
+        start_pub.publish(start_command);
+
+    }
+
     // this function gets called every time new pcl data comes in
     void cloudcb(const sensor_msgs::PointCloud2ConstPtr &scan)
     {
+        header = scan->header.frame_id;
         ROS_DEBUG("Filtered cloud receieved");
         sensor_msgs::PointCloud2::Ptr ros_cloud(new sensor_msgs::PointCloud2 ());
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -106,8 +126,6 @@ public:
         // transform.setRotation(q);
         // br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), scan->header.frame_id, "cluster_1_frame"));
 
-        
-
         for(const auto & index : cluster_indices)
         {
             number_clusters = (int) cluster_indices.size();
@@ -127,9 +145,9 @@ public:
             pt.point.y = centroid(1);
             pt.point.z = centroid(2);
 
-            if (pt.point.y < 0.21 | pt.point.y > 0.24){
-                continue;
-            }
+            // if (pt.point.y < 0.21 | pt.point.y > 0.24){
+            //     continue;
+            // }
 
             // Compute standard deviation
             double x_spread = 0;
@@ -158,7 +176,7 @@ public:
             ROS_DEBUG("Publishing extracted cloud");
             pcl::toROSMsg(*cloud_cluster, *ros_cloud);
             ros_cloud->header.frame_id = scan->header.frame_id;
-            if(j < 1)
+            if(j < MAX_CLUSTERS)
             {
                 // cloud_pub[j].publish(ros_cloud);
 
@@ -212,13 +230,14 @@ public:
                 double xdist = fabs(center.x - x_axis.x);
                 double angle = atan2(zdist,xdist);
 
-                // let's send transforms as well:
-                tf::Transform transform;
-                transform.setOrigin( tf::Vector3(centroid(0), centroid(1), centroid(2)) );
-                tf::Quaternion q;
-                q.setRPY(0, angle, 0);
-                transform.setRotation(q);
-                br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), scan->header.frame_id, "cluster_" + std::to_string(j + 1) + "_frame"));
+                // Set up transform but do not broadcast:
+                if (j == 0){
+                    transform.setOrigin( tf::Vector3(centroid(0), centroid(1), centroid(2)) );
+                    tf::Quaternion q;
+                    q.setRPY(0, angle, 0);
+                    transform.setRotation(q);
+                    br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), header, "target"));
+                }
             }
             j++;
         }

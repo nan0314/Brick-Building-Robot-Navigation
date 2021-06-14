@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseWithCovarianceStamped
+import math
 import time
 import tf
 import tf2_ros
@@ -56,7 +57,7 @@ def talker():
     
     roll = 0
     pitch = 0
-    yaw = 0
+    yaw = math.pi/2
     quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
     #type(pose) = geometry_msgs.msg.Pose
     my_wp.pose.pose.orientation.x = quaternion[0]
@@ -84,13 +85,13 @@ def talker():
     start_command = Empty()
     
     while not rospy.is_shutdown():
-            connections = pub_init_wp.get_num_connections()
-            if connections > 0:
-                pub_init_wp.publish(start_command)
-                rospy.loginfo("Sent waypoint list execution command")
-                break
-            rospy.loginfo("Waiting for /path_ready topic")
-            rate.sleep()
+      connections = pub_init_wp.get_num_connections()
+      if connections > 0:
+          pub_init_wp.publish(start_command)
+          rospy.loginfo("Sent waypoint list execution command")
+          break
+      rospy.loginfo("Waiting for /path_ready topic")
+      rate.sleep()
 
 
 if __name__ == '__main__':

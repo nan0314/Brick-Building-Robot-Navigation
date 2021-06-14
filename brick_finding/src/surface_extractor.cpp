@@ -29,7 +29,7 @@ void cloud_callback(const sensor_msgs::PointCloud2ConstPtr &scan) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr output (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr outliers (new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr floor (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cleaned (new pcl::PointCloud<pcl::PointXYZ>);
 
 
     // set time stamp and frame id
@@ -75,19 +75,17 @@ void cloud_callback(const sensor_msgs::PointCloud2ConstPtr &scan) {
     //                                     << coefficients->values[2] << " " 
     //                                     << coefficients->values[3] << std::endl;
 
-    // for (const auto& point : cloud -> points){
-    //     if (point.z < -0.3){
-    //         output->points.push_back(point);
-    //     } else{
-    //         outliers->points.push_back(point);
-    //     }
-    // }
+    for (const auto& point : outliers -> points){
+        if (point.y < coefficients->values[3]){
+            cleaned->points.push_back(point);
+        }
+    }
 
     pcl::toROSMsg(*output, *ros_cloud);
     ros_cloud->header.frame_id = scan->header.frame_id;
     cloud_pub.publish(ros_cloud);
 
-    pcl::toROSMsg(*outliers, *ros_cloud);
+    pcl::toROSMsg(*cleaned, *ros_cloud);
     ros_cloud->header.frame_id = scan->header.frame_id;
     outliers_pub.publish(ros_cloud);
 

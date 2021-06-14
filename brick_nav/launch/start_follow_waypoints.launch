@@ -7,4 +7,6 @@
         <param name="custom_waypointstopic" value="$(arg waypoints_topic)"/>
     </node>
 
+    <node pkg="brick_nav" type="waypoint_publisher" name="waypoint_publisher" output="screen"/>
+
 </launch>
