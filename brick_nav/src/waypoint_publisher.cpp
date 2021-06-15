@@ -1,12 +1,10 @@
 #include <string>
 #include <vector>
-
 #include <iostream>
 #include "ros/ros.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <cmath>
 #include <time.h>
-// #include <tf>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/TransformStamped.h>

@@ -1,6 +1,5 @@
 #include <string>
 #include <vector>
-
 #include <iostream>
 #include "ros/ros.h"
 #include "sensor_msgs/PointCloud2.h"
@@ -89,31 +88,11 @@ void cloud_callback(const sensor_msgs::PointCloud2ConstPtr &scan) {
     ros_cloud->header.frame_id = scan->header.frame_id;
     outliers_pub.publish(ros_cloud);
 
-    // for (const auto& idx : inliers->indices){
-    //     floor->points.push_back(cloud->points[idx]);
-    // }
-    // pcl::toROSMsg(*floor, *ros_cloud);
-    // ros_cloud->header.frame_id = scan->header.frame_id;
-    // floor_pub.publish(ros_cloud);
-
 }
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "surface_extractor");
   ros::NodeHandle nh;
-
-//   ros::Publisher marker_pub =
-//       nh.advertise<visualization_msgs::Marker>("surface_objects", 100);
-//   ros::Publisher cropped_input_pub = nh.advertise<sensor_msgs::PointCloud2>(
-//       "demo_cropped_input_cloud", 1, true);
-
-//   std::string target_frame("base_link");
-//   if (argc > 1) {
-//     target_frame = argv[1];
-//   }
-
-//   SurfaceViz viz(marker_pub);
-//   Demo demo(viz, target_frame, cropped_input_pub);
 
     cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/inliers", 1);
     outliers_pub = nh.advertise<sensor_msgs::PointCloud2>("/outliers", 1);

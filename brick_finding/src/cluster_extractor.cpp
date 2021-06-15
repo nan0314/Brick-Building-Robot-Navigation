@@ -118,14 +118,6 @@ public:
         geometry_msgs::PointStamped pt;
         Eigen::Vector4f centroid;
 
-        // std::cout << cluster_indices.size() << std::endl;
-        // tf::Transform transform;
-        // transform.setOrigin( tf::Vector3(1.5, -0.14,-0.38) );
-        // tf::Quaternion q;
-        // q.setRPY(0, 0, 0);
-        // transform.setRotation(q);
-        // br.sendTransform( tf::StampedTransform(transform, ros::Time::now(), scan->header.frame_id, "cluster_1_frame"));
-
         for(const auto & index : cluster_indices)
         {
             number_clusters = (int) cluster_indices.size();
@@ -211,11 +203,7 @@ public:
                 pcl::PointXYZ center (mass_center (0), mass_center (1), mass_center (2));
                 pcl::PointXYZ x_axis (major_vector (0) + mass_center (0), major_vector (1) + mass_center (1), major_vector (2) + mass_center (2));
                 pcl::PointXYZ y_axis (middle_vector (0) + mass_center (0), middle_vector (1) + mass_center (1), middle_vector (2) + mass_center (2));
-                pcl::PointXYZ z_axis (minor_vector (0) + mass_center (0), minor_vector (1) + mass_center (1), minor_vector (2) + mass_center (2));
-                // viewer->addLine (center, x_axis, 1.0f, 0.0f, 0.0f, "major eigen vector");
-                // viewer->addLine (center, y_axis, 0.0f, 1.0f, 0.0f, "middle eigen vector");
-                // viewer->addLine (center, z_axis, 0.0f, 0.0f, 1.0f, "minor eigen vector");
-                
+                pcl::PointXYZ z_axis (minor_vector (0) + mass_center (0), minor_vector (1) + mass_center (1), minor_vector (2) + mass_center (2));               
 
            
                 // compute centroid and publish
